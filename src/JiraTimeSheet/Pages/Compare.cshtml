@@ -1,0 +1,109 @@
+@page
+@model JiraTimeSheet.Pages.Compare
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title></title>
+</head>
+
+<body>
+<div>
+    <h4>Compare Worklogs</h4>
+    <table class="table table-striped">
+        <tr>
+            <th>Date</th>
+            <th>JiraSource Time (secs)</th>
+            <th>JiraSource Time</th>
+            <th>JiraSource Comment</th>
+            <th>MS Teams Time (secs)</th>
+            <th>MS Teams Time</th>
+            <th>MS Teams Comment</th>
+            <th>Json</th>
+        </tr>
+
+
+        @{
+            int index = 0;
+        }
+        @foreach (var jiraItem in Model.TimeSheet)
+        {
+            @foreach (var record in Model.TimeSheet[jiraItem.Key])
+            {
+                <tr>
+                    <td>
+                        @record.Started
+                    </td>
+                    <td>
+                        @record.JiraWorklogRecord.TimeSpentSeconds
+                    </td>
+                    <td>
+                        @record.JiraWorklogRecord.TimeSpent
+                    </td>
+                    <td>
+                        @record.JiraWorklogRecord.Comment
+                    </td>
+                    <td>
+                        @record.ExternalWorklogRecord.TimeSpentSeconds
+                    </td>
+                    <td>
+                        @record.ExternalWorklogRecord.TimeSpent
+                    </td>
+                    <td>
+                        @record.ExternalWorklogRecord.Comment
+                    </td>
+                    <td>
+                        @{
+                            string recordName = "WorklogJson" + @index++;
+                        }
+                        <img src="Images/copy-outline-icon.png" alt="Copy" onclick="copyToClipboard('@recordName');"
+                             style="max-height: 20px; max-width: 20px; cursor: pointer; margin-left: 0px; margin-top: 0px; background-color: white"/>
+
+
+                        @Html.EditorFor(m => record.ExternalWorklogRecord.Json,
+                            new
+                            {
+                                htmlAttributes = new
+                                {
+                                    @id = @recordName,
+                                    @readonly = "true",
+                                    @size = Math.Min(@record.ExternalWorklogRecord.Json.Length + 2, 80),
+                                    @onclick = "this.select()"
+                                }
+                            })
+                    </td>
+                </tr>
+            }
+        }
+    </table>
+</div>
+<div>
+    <form class="form-horizontal" method="post">
+        <div class="form-group">
+            <label for="Comment" class="col-sm-2 control-label">Comment</label>
+            <div class="col-sm-10">
+                <input type="text" class="form-control" name="Comment">
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+                <button type="submit" class="btn btn-default">Compare</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script type="text/javascript">
+            function copyToClipboard(recordName) {
+                var copyText = document.getElementById(recordName);
+                copyText.select();
+                copyText.setSelectionRange(0, 99999);
+                navigator.clipboard.writeText(copyText.value);
+            };
+        </script>
+}
+
+</body>
+</html>

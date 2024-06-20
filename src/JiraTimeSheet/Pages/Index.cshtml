@@ -1,0 +1,204 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<h3>@ViewData["confirmation"]</h3>
+<form method="post">
+    <div class="row">
+        <!-- Jira Settings -->
+        <div class="col-md-6 border rounded p-3">
+            <h4>Jira</h4>
+            <div class="form-group">
+                <input asp-for="JiraConfig.Url" class="form-control" placeholder="URL">
+            </div>
+            <div class="form-group">
+                <input asp-for="JiraConfig.User" class="form-control" placeholder="User">
+            </div>
+            <div class="form-group">
+                <input asp-for="JiraConfig.Password" type="password" class="form-control" placeholder="Password">
+            </div>
+        </div>
+
+        <!-- MS Teams Settings -->
+        <div class="col-md-6 border rounded p-3">
+            <h4>MS Teams</h4>
+            <div class="form-group">
+                <input asp-for="TeamsConfig.ClientId" class="form-control" placeholder="ClientId">
+            </div>
+            <div class="form-group">
+                <input asp-for="TeamsConfig.TenantId" class="form-control" placeholder="Tenant">
+            </div>
+            @if (ViewData["DeviceCode"] != null)
+            {
+                <div>@ViewData["DeviceCode"].ToString()</div>
+            }
+        </div>
+    </div>
+
+    <!-- MS Teams Chats -->
+    <div class="form-group mt-3">
+        <h4>Mapping</h4>
+        <div class="table-responsive">
+            <table id="mappingsContainer">
+                <thead>
+                <tr>
+                    <th>Teams Chat</th>
+                    <th>Comment</th>
+                    <th>Jira Item</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Delete</th>
+                </tr>
+                </thead>
+                <tbody>
+                <!-- table rows go here -->
+                </tbody>
+                <tfoot>
+                <tr>
+                    <td colspan="6" style="text-align: right;">
+                        <button type="button" onclick="addMapping()" class="floating-button">+</button>
+                    </td>
+                </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="form-group mt-3">
+        <button type="submit" class="btn btn-primary">Compare</button>
+    </div>
+</form>
+<script>
+// Function to save rows to localStorage
+function saveMappings() {
+    const table = document.getElementById('mappingsContainer').getElementsByTagName('tbody')[0];
+    const rows = Array.from(table.querySelectorAll('tr')).map(row => {
+        return Array.from(row.querySelectorAll('input')).map(input => input.value);
+    });
+    localStorage.setItem('tableRows', JSON.stringify(rows));
+}
+
+// Function to load rows from localStorage
+function loadMappings() {
+    const table = document.getElementById('mappingsContainer').getElementsByTagName('tbody')[0];
+    const rows = JSON.parse(localStorage.getItem('tableRows')) || [];
+    rows.forEach(rowData => {
+        addMapping(rowData);
+    });
+}
+
+function saveConfigFields() {
+    const jiraUrl = document.querySelector('[name="JiraConfig.Url"]').value;
+    const clientId = document.querySelector('[name="TeamsConfig.ClientId"]').value;
+    const tenantId = document.querySelector('[name="TeamsConfig.TenantId"]').value;
+
+    const configFields = { jiraUrl, clientId, tenantId };
+    localStorage.setItem('configFields', JSON.stringify(configFields));
+}
+
+function loadConfigFields() {
+    const savedData = JSON.parse(localStorage.getItem('configFields')) || {};
+
+    if (savedData.jiraUrl) {
+        document.querySelector('[name="JiraConfig.Url"]').value = savedData.jiraUrl;
+    }
+    if (savedData.clientId) {
+        document.querySelector('[name="TeamsConfig.ClientId"]').value = savedData.clientId;
+    }
+    if (savedData.tenantId) {
+        document.querySelector('[name="TeamsConfig.TenantId"]').value = savedData.tenantId;
+    }
+}
+
+function addMapping(rowData = []) {
+    var table = document.getElementById('mappingsContainer').getElementsByTagName('tbody')[0];
+    var index = table.rows.length;
+    var row = table.insertRow();
+    
+    var inputTypes = ['text', 'text', 'text', 'date', 'date'];
+    var inputNames = [
+        `mappings[${index}].ChatName`,
+        `mappings[${index}].Comment`,
+        `mappings[${index}].JiraItem`,
+        `mappings[${index}].StartDate`,
+        `mappings[${index}].EndDate`
+    ];
+    
+    inputTypes.forEach(function(type, i) {
+        var cell = row.insertCell(i);
+        var input = document.createElement('input');
+        input.type = type;
+        input.name = inputNames[i];
+        input.value = rowData[i] || '';
+        cell.appendChild(input);
+    });
+    
+    // Add delete button
+    var deleteCell = row.insertCell(inputTypes.length);
+    var deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = '-';
+    deleteBtn.className = 'delete-row';
+    deleteCell.appendChild(deleteBtn);
+}
+
+// Call loadRows when the document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    loadMappings();
+    loadConfigFields();
+});
+
+// Save rows whenever you add or delete a row
+document.addEventListener('click', function(e) {
+    if(e.target && e.target.classList.contains('delete-row')) {
+        var row = e.target.closest('tr');
+        row.parentNode.removeChild(row);
+        saveMappings();
+    }
+});
+
+// Example usage: Saving rows whenever a new row is added
+function addMappingAndSave() {
+    addMapping();
+    saveMappings();
+}
+
+//let checkAuthInterval;
+
+document.addEventListener('input', function(e) {
+    if (e.target.closest('table') === document.getElementById('mappingsContainer')) {
+        saveMappings();
+    } else {
+        saveConfigFields();
+    }
+});
+
+//document.querySelector('button[type="submit"]').addEventListener('click', function(e) {
+    checkAuthInterval = setInterval(checkAuth, 1000);
+//});
+
+
+function checkAuth() {
+    fetch('/CheckAuth')
+        .then(response => response.json())
+        .then(data => {
+            if (data) {
+                Swal.fire({
+                    title: 'Authorization Required',
+                    html: data,
+                    confirmButtonText: 'Close',
+                    customClass:{confirmButton: 'btn btn-primary'},
+                    buttonsStyling: false,
+                    //willClose: () => {
+                    //    clearInterval(checkAuthInterval);
+                    //}
+                });
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+</script>

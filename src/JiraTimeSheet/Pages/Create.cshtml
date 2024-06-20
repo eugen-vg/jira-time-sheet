@@ -1,0 +1,45 @@
+@page
+@model JiraTimeSheet.Pages.Create
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+<div>
+    
+<h4>New Items</h4>
+<table class="table table-striped">
+    <tr>
+        <th>Date</th>
+        <th>Time (secs)</th>
+        <th>Time</th>
+        <th>Comment</th>
+    </tr>
+    @foreach (var record in Model.NewWorklog)
+    {
+        <tr>
+            <td>
+                @record.Started
+            </td>
+            <td>
+                @record.TimeSpentSeconds
+            </td>
+            <td>
+                @record.TimeSpent
+            </td>
+            <td>
+                @record.Comment
+            </td>
+        </tr>
+    }
+</table>
+</div>
+</body>
+</html>
