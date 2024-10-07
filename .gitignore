@@ -968,4 +968,3 @@ Temporary Items
 # IntelliJ project files
 .idea
 data
-**/wwwroot/lib
