@@ -40,12 +40,12 @@ public class JiraSource : IJiraSource
 		options.Converters.Add(new CustomDateTimeConverter());
 		options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 
-		var response = client.GetAsync($"{settings.Url}/rest/api/2/myself").Result;
+		var response = client.GetAsync(new Uri(new Uri(settings.Url), "rest/api/2/myself")).Result;
 		response.EnsureSuccessStatusCode();
 		var responseContent = response.Content.ReadAsStringAsync().Result;
 		var user = JsonSerializer.Deserialize<JiraUser>(responseContent, options) ?? new JiraUser();
 
-		response = client.GetAsync($"{settings.Url}/rest/api/2/issue/{jiraItem}/worklog").Result;
+		response = client.GetAsync(new Uri(new Uri(settings.Url), $"rest/api/2/issue/{jiraItem}/worklog")).Result;
 		response.EnsureSuccessStatusCode();
 		responseContent = response.Content.ReadAsStringAsync().Result;
 		GetWorklogResponse worklogResponse = JsonSerializer.Deserialize<GetWorklogResponse>(responseContent, options) ?? new GetWorklogResponse();
