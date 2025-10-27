@@ -10,6 +10,7 @@
 
 <body>
 <div>
+    @Html.AntiForgeryToken()
     <h4>Compare Worklogs</h4>
     <table class="table table-striped">
         <tr>
@@ -21,6 +22,7 @@
             <th>MS Teams Time</th>
             <th>MS Teams Comment</th>
             <th>Json</th>
+            <th>Create</th>
         </tr>
 
 
@@ -55,43 +57,67 @@
                     </td>
                     <td>
                         @{
-                            string recordName = "WorklogJson" + @index++;
+                            string recordName = "WorklogJson" + @index;
+                            string checkboxName = "WorklogCheckbox" + @index;
+                            bool hasTeamsTime = record.ExternalWorklogRecord.TimeSpentSeconds > 0;
+                            index++;
                         }
-                        <img src="Images/copy-outline-icon.png" alt="Copy" onclick="copyToClipboard('@recordName');"
-                             style="max-height: 20px; max-width: 20px; cursor: pointer; margin-left: 0px; margin-top: 0px; background-color: white"/>
+                        @if (hasTeamsTime)
+                        {
+                            <img src="Images/copy-outline-icon.png" alt="Copy" onclick="copyToClipboard('@recordName');"
+                                 style="max-height: 20px; max-width: 20px; cursor: pointer; margin-left: 0px; margin-top: 0px; background-color: white"/>
 
 
-                        @Html.EditorFor(m => record.ExternalWorklogRecord.Json,
-                            new
-                            {
-                                htmlAttributes = new
+                            @Html.EditorFor(m => record.ExternalWorklogRecord.Json,
+                                new
                                 {
-                                    @id = @recordName,
-                                    @readonly = "true",
-                                    @size = Math.Min(@record.ExternalWorklogRecord.Json.Length + 2, 80),
-                                    @onclick = "this.select()"
-                                }
-                            })
+                                    htmlAttributes = new
+                                    {
+                                        @id = @recordName,
+                                        @class = "worklog-json",
+                                        @size = Math.Min(@record.ExternalWorklogRecord.Json.Length + 2, 80),
+                                        @onclick = "this.select()"
+                                    }
+                                })
+                        }
+                        else
+                        {
+                            <span style="color: #999;">-</span>
+                        }
+                    </td>
+                    <td>
+                        @if (hasTeamsTime)
+                        {
+                            <input type="checkbox" id="@checkboxName" class="worklog-checkbox" data-json-id="@recordName" />
+                        }
+                        else
+                        {
+                            <span style="color: #999;">-</span>
+                        }
                     </td>
                 </tr>
             }
         }
     </table>
-</div>
-<div>
-    <form class="form-horizontal" method="post">
-        <div class="form-group">
-            <label for="Comment" class="col-sm-2 control-label">Comment</label>
-            <div class="col-sm-10">
-                <input type="text" class="form-control" name="Comment">
-            </div>
+    
+    <div class="mt-3 mb-3">
+        <button id="createWorklogsBtn" class="btn btn-primary" onclick="createWorklogs()">Create Selected Worklogs</button>
+        <button id="selectAllBtn" class="btn btn-secondary ms-2" onclick="selectAll()">Select All</button>
+        <button id="deselectAllBtn" class="btn btn-secondary ms-2" onclick="deselectAll()">Deselect All</button>
+    </div>
+    
+    <div id="progressContainer" style="display: none;" class="mb-3">
+        <div class="progress">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                 style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
         </div>
-        <div class="form-group">
-            <div class="col-sm-offset-2 col-sm-10">
-                <button type="submit" class="btn btn-default">Compare</button>
-            </div>
-        </div>
-    </form>
+        <div id="progressText" class="mt-2"></div>
+    </div>
+    
+    <div id="resultsContainer" style="display: none;" class="alert" role="alert">
+        <h5>Results:</h5>
+        <ul id="resultsList"></ul>
+    </div>
 </div>
 
 @section Scripts {
@@ -101,7 +127,99 @@
                 copyText.select();
                 copyText.setSelectionRange(0, 99999);
                 navigator.clipboard.writeText(copyText.value);
-            };
+            }
+            
+            function selectAll() {
+                document.querySelectorAll('.worklog-checkbox:not([disabled])').forEach(cb => cb.checked = true);
+            }
+            
+            function deselectAll() {
+                document.querySelectorAll('.worklog-checkbox:not([disabled])').forEach(cb => cb.checked = false);
+            }
+            
+            async function createWorklogs() {
+                const checkboxes = document.querySelectorAll('.worklog-checkbox:checked');
+                
+                if (checkboxes.length === 0) {
+                    alert('Please select at least one worklog to create');
+                    return;
+                }
+                
+                // Disable buttons during creation
+                document.getElementById('createWorklogsBtn').disabled = true;
+                document.getElementById('selectAllBtn').disabled = true;
+                document.getElementById('deselectAllBtn').disabled = true;
+                
+                // Show progress container
+                document.getElementById('progressContainer').style.display = 'block';
+                document.getElementById('resultsContainer').style.display = 'none';
+                
+                const total = checkboxes.length;
+                let completed = 0;
+                let successful = 0;
+                let failed = 0;
+                const results = [];
+                
+                for (const checkbox of checkboxes) {
+                    const jsonId = checkbox.getAttribute('data-json-id');
+                    const jsonInput = document.getElementById(jsonId);
+                    const worklogJson = jsonInput.value;
+                    
+                    try {
+                        // Get anti-forgery token
+                        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                        
+                        const response = await fetch('/Compare?handler=CreateWorklog', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': token
+                            },
+                            body: JSON.stringify({ worklogJson: worklogJson })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            successful++;
+                            results.push(`✓ Worklog ${completed + 1}: Created successfully`);
+                            checkbox.checked = false;
+                            checkbox.disabled = true;
+                        } else {
+                            failed++;
+                            results.push(`✗ Worklog ${completed + 1}: ${result.message}`);
+                        }
+                    } catch (error) {
+                        failed++;
+                        results.push(`✗ Worklog ${completed + 1}: ${error.message}`);
+                    }
+                    
+                    completed++;
+                    
+                    // Update progress bar
+                    const percentage = Math.round((completed / total) * 100);
+                    const progressBar = document.getElementById('progressBar');
+                    progressBar.style.width = percentage + '%';
+                    progressBar.setAttribute('aria-valuenow', percentage);
+                    progressBar.textContent = percentage + '%';
+                    
+                    document.getElementById('progressText').textContent = 
+                        `Progress: ${completed} of ${total} worklogs processed (${successful} successful, ${failed} failed)`;
+                }
+                
+                // Show results
+                document.getElementById('resultsContainer').style.display = 'block';
+                document.getElementById('resultsContainer').className = 
+                    failed === 0 ? 'alert alert-success' : (successful === 0 ? 'alert alert-danger' : 'alert alert-warning');
+                    
+                const resultsList = document.getElementById('resultsList');
+                resultsList.innerHTML = results.map(r => `<li>${r}</li>`).join('');
+                
+                // Re-enable buttons
+                document.getElementById('createWorklogsBtn').disabled = false;
+                document.getElementById('selectAllBtn').disabled = false;
+                document.getElementById('deselectAllBtn').disabled = false;
+            }
         </script>
 }
 

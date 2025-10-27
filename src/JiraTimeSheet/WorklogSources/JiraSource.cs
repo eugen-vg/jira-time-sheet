@@ -53,6 +53,28 @@ public class JiraSource : IJiraSource
 
 		return WorklogFormatter.GroupWorklogByStartedDate(userWorklog);
 	}
+
+	public async Task<bool> CreateWorklog(JiraSettings settings, string jiraItem, string worklogJson)
+	{
+		try
+		{
+			using var client = new HttpClient();
+			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+				"Basic",
+				Convert.ToBase64String(Encoding.ASCII.GetBytes($"{settings.User}:{settings.Password}")));
+
+			var content = new StringContent(worklogJson, Encoding.UTF8, "application/json");
+			var response = await client.PostAsync(
+				new Uri(new Uri(settings.Url), $"rest/api/2/issue/{jiraItem}/worklog"),
+				content);
+
+			return response.IsSuccessStatusCode;
+		}
+		catch
+		{
+			return false;
+		}
+	}
 }
 
 public class JiraUser
