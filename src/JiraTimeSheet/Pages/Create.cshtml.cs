@@ -9,7 +9,7 @@ public class Create : PageModel
 	public List<WorklogRecord> NewWorklog { get; set; } = new List<WorklogRecord>();
 	public void OnGet(string Comment)
 	{
-		NewWorklog = JsonConvert.DeserializeObject<List<WorklogRecord>>(TempData[nameof(NewWorklog)]?.ToString() ?? string.Empty) ?? new List<WorklogRecord>();
+		NewWorklog = JsonConvert.DeserializeObject<List<WorklogRecord>>(TempData.Peek(nameof(NewWorklog))?.ToString() ?? string.Empty) ?? new List<WorklogRecord>();
 		foreach (var worklogRecord in NewWorklog)
 		{
 			worklogRecord.Comment = Comment;

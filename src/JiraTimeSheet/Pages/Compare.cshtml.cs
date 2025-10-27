@@ -41,7 +41,13 @@ public class Compare : PageModel
 
 		if (TempData.Peek("Mappings") is string chatsStr)
 		{
-			mappings = JsonConvert.DeserializeObject<List<Mapping>>(chatsStr);
+			mappings = JsonConvert.DeserializeObject<List<Mapping>>(chatsStr) ?? new List<Mapping>();
+		}
+
+		if (mappings.Count == 0)
+		{
+			_logger.LogWarning("No mappings found in TempData");
+			return;
 		}
 
 		JiraWorklog = _jiraSource.GetWorklog(jiraSettings, mappings[0].JiraItem).ToList();
