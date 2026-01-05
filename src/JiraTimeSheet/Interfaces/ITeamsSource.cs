@@ -4,5 +4,5 @@ namespace JiraTimeSheet;
 
 public interface ITeamsSource
 {
-	IEnumerable<WorklogRecord> GetWorklog(TeamsSettings settings, string chatName, DateOnly? startDate = null, DateOnly? endDate = null);
+	Task<IEnumerable<WorklogRecord>> GetWorklog(TeamsSettings settings, string chatName, DateOnly? startDate = null, DateOnly? endDate = null);
 }

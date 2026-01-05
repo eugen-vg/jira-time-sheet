@@ -23,7 +23,7 @@ public class Compare : PageModel
 		_logger = logger;
 	}
 
-	public void OnGet()
+	public async Task OnGet()
 	{
 		JiraSettings jiraSettings = new();
 		TeamsSettings teamsSettings = new();
@@ -53,7 +53,7 @@ public class Compare : PageModel
 		JiraWorklog = _jiraSource.GetWorklog(jiraSettings, mappings[0].JiraItem).ToList();
 		foreach (var mapping in mappings)
 		{
-			var worklog = _teamsSource.GetWorklog(teamsSettings, mapping.ChatName, mapping.StartDate, mapping.EndDate).ToList();
+			var worklog = (await _teamsSource.GetWorklog(teamsSettings, mapping.ChatName, mapping.StartDate, mapping.EndDate)).ToList();
 			foreach (var worklogRecord in worklog)
 			{
 				worklogRecord.Comment = mapping.Comment;
