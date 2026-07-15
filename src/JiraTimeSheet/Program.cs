@@ -20,6 +20,7 @@ builder.Services.AddRazorPages().AddJsonOptions(options =>
 
 var graphUserScopes = builder.Configuration.GetSection("MsGraph:UserScopes").Get<string[]>() ?? Array.Empty<string>();
 
+builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IDeviceCodeService, DeviceCodeService>();
 builder.Services.AddTransient<IJiraSource, JiraSource>();
